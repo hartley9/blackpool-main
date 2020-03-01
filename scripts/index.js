@@ -25,7 +25,8 @@ let loader, object, mixer;
 
 //video texture variables
 let container;
-let video, videoImage, videoImageContext, videoTexture;
+let video, videoImage, videoImageContext, videoTexture, movieScreen;
+let videoOn = true;
 
 //Boxcontainer
 let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
@@ -117,14 +118,17 @@ function loadModels(arr, mixers, actions, scene)
     //var bream;
     for (let i=0; i<breamNum; i++)
     {
-        loader.load('objects/bream/scene.gltf', gltf => onLoad( gltf, breamLocations[i], 0.025), onProgress, onError);
+        loader.load('objects/bream/scene.gltf', gltf => onLoad( gltf, breamLocations[i], 0.085), onProgress, onError);
         console.log('bream locations: ' + breamLocations[i]);
     }
-
-    
-    
-    
+    /*
+    var loc = new THREE.Vector3(getRandomNum(-30, 30), getRandomNum(-30, 0), getRandomNum(-30, 30));
+    loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(gltf, loc, 0.05), onProgress, onError);
+    */
 }
+
+
+const getRandomNum = (max = 0 , min = 0) => Math.floor(Math.random() * (max + 1 - min)) + min;
 
 let creatureMeshGroup;
 let creatureNum = breamNum;
@@ -173,16 +177,18 @@ function init()
     camera = new THREE.PerspectiveCamera(55,
         window.innerWidth / window.innerHeight, 
         0.1, 
-        1000);
-    camera.position.set(0,200,5);
+        2500);
+    camera.position.set(0,1500,0);
 
     //Renderer
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.body.appendChild(renderer.domElement);
+    
     document.body.addEventListener('click', printCoords, true);
     document.body.addEventListener('mousemove', onMouseMove, true);
+    document.body.addEventListener('keydown', onKeyPress, true);
     
     //clock for animations
     clock = new THREE.Clock();
@@ -206,8 +212,7 @@ function init()
     var controls = new OrbitControls( camera, renderer.domElement);
     
     //setting the camera position
-    camera.position.y = 500;
-    camera.position.z = 0;
+    
 
     //event listeniner for window resize
     window.addEventListener('resize', onWindowResize, false);
@@ -311,14 +316,16 @@ function webcamUpdate()
 
 //Function is playing video texture
 function renderVideo(){
-    /*play video texture at bottom */
-    if ( video.readyState === video.HAVE_ENOUGH_DATA )
-    {
-        videoImageContext.drawImage( video, 0, 0 );
-        if ( videoTexture )
+    if (videoOn === true){
+        /*play video texture at bottom */
+        if ( video.readyState === video.HAVE_ENOUGH_DATA )
         {
-            videoTexture.needsUpdate = true;
-            video.play();
+            videoImageContext.drawImage( video, 0, 0 );
+            if ( videoTexture )
+            {
+                videoTexture.needsUpdate = true;
+                video.play();
+            }
         }
     }
 }
@@ -335,13 +342,13 @@ function backgroundTexture()
 {
     video = document.createElement( 'video' );
     video.autoplay = true;
-    video.src = './scripts/zip_birds/birds.mp4';
+    video.src = './scripts/videos/fish.mp4';
     video.load();
     video.play();
 
     videoImage = document.createElement( 'canvas' );
-    videoImage.width = 480;
-    videoImage.height = 204;
+    videoImage.width = 1920;
+    videoImage.height = 1080;
 
     videoImageContext = videoImage.getContext( '2d' );
     videoImageContext.fillStyle = '#808080';
@@ -353,13 +360,27 @@ function backgroundTexture()
     
     var movieMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, overdraw: true, side: THREE.DoubleSide});
 
-    var movieGeometry = new THREE.PlaneBufferGeometry( 750, 750, myH, 4, 4);
-    var movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
+    var movieGeometry = new THREE.PlaneBufferGeometry( 1920, 1080, myH, 4, 4);
+    movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
  
     movieScreen.position.set(0, -300, 0);
     movieScreen.rotation.x = Math.PI * - 0.5;
     scene.add(movieScreen);
     video.play();
+}
+
+function onKeyPress(){
+    var keyCode = event.which;
+    if (keyCode == 87) {
+        console.log(movieScreen);
+        movieScreen.material.color = new THREE.Color(0xffffff);
+        console.log('keypress');
+        videoOn = false;
+
+        movieScreen.material.color = new THREE.Color(0xffffff);
+        movieScreen.material.map = null;
+    }
+   
 }
 
 function addGUI(){
@@ -382,6 +403,9 @@ function printCoords()
        // console.log(temp_arr);
     }
 }
+
+
+
 
 /*
 CURRENTLY UNUSED/PREVIOUSLY USED FUNCTIONS
