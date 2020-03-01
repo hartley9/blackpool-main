@@ -1,0 +1,23 @@
+{
+  "name": "blackpool",
+  "version": "1.0.0",
+  "description": "blackpool impl",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hartley9/blackpool.git"
+  },
+  "author": "kobi hartley",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hartley9/blackpool/issues"
+  },
+  "homepage": "https://github.com/hartley9/blackpool#readme",
+  "dependencies": {
+    "happyfuntimes": "^0.2.5",
+    "requirejs": "^2.3.6",
+    "three": "file:three"
+  }
+}
