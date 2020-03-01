@@ -42,7 +42,6 @@ Fish Variables
 let models = {
     bream: [],
     whale: [], 
-
 }
 //Arrays for animations of objects
 //As with above, make into object, 
@@ -51,7 +50,7 @@ let mixers = [];
 let actions = [];
 
 //Bream
-let breamNum = 15;
+let breamNum = 30;
 //Intialise random starting locations for fish here
 let breamLocations = [];
 for (let i=0; i<breamNum; i++){
@@ -103,13 +102,8 @@ function loadModels(arr, mixers, actions, scene)
         model = arr[(arr.length-1)].scene.children[ 0 ];
         model.position.copy( position );
         model.scale.set(scale, scale, scale);
-        
-       // model = arr[(arr.length-1)].scene;
-        model.rotation.x += new THREE.Math.degToRad(180);
-        model.rotation.y += new THREE.Math.degToRad(180);
-        model.rotation.z += new THREE.Math.degToRad(180);
-        model.rotation.z  = -80;
-        
+
+
         //Aniimation and mixers
         scene.add(arr[(arr.length-1)].scene);
     };
@@ -133,7 +127,7 @@ function loadModels(arr, mixers, actions, scene)
 }
 
 let creatureMeshGroup;
-let creatureNum = 15;
+let creatureNum = breamNum;
 let boid;
 //creatures
 const generateBoid = () => {
@@ -249,6 +243,7 @@ function animate()
     renderVideo();
     boid.update(boxContainer);
     moveModels(models.bream);
+    //models.bream[0].scene.children[ 0 ].rotation.x += 5;
 
 }
 
@@ -265,63 +260,27 @@ function moveModels(arr)
    for (let i =0; i<arr.length; i++)
    {
 
-       
+        //Move fish with creature
         currModel = arr[ i ].scene.children[ 0 ];
-        
         currModel.position.x = boid.creatures[i].mesh.position.x;
         currModel.position.y = boid.creatures[i].mesh.position.y;
         currModel.position.z = boid.creatures[i].mesh.position.z;
 
-        
-        //Rotation of model
-        
+        currModel.rotation.x = boid.creatures[i].mesh.rotation.x;
+        currModel.rotation.y = boid.creatures[i].mesh.rotation.y;
+        currModel.rotation.z = boid.creatures[i].mesh.rotation.z;
+        currModel.rotateX(80);
+
+       
+        //Rotation of model with movement
+        /*
         var head = boid.creatures[i].velocity.clone();
         head.multiplyScalar(10);
         head.add(boid.creatures[i].mesh.position);
         currModel.lookAt(head);
-        
-        //currModel.rotation.z = breamBoids.boids[i].velocity.heading();
-        console.log(currModel);
-        currModel.rotation.x += 10;
-   }    
-}
+        */
+   }
 
-function moveCrude(models){
-    
-    for (let i = 0; i < models.length; i++)
-    {
-        if (models[i] !== undefined){
-            currModel = models[ i ].scene.children[ 0 ];
-            currModel.position.x = currModel.position.x += breamX;
-            //breamZ = currModel.position.z += 0.5;
-            //currModel.position.set( breamX, currModel.position.y, breamZ );
-            if (currModel.position.x >= W/4){
-                breamX = -1.5;
-                changeRotation(models, 1);
-            } else if (currModel.position.x <= -W/4)
-            {
-                breamX = 1.5;
-                changeRotation(models, 0);
-                
-            }
-        }
-    }
-    
-}
-
-function changeRotation(models, type)
-{
-    for (let i = 0; i<models.length; i++){
-        var model = models[i].scene.children[ 0 ]; 
-        if (type === 0)
-        {
-            model.rotation.z = -80;
-        }
-        else if (type === 1)
-        {
-            model.rotation.z = 80;
-        }
-    }   
 }
 
 function webcamUpdate()

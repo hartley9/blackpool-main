@@ -1,7 +1,7 @@
 import * as THREE from '../build/three.module.js';
 
 let mainParams = {
-    maxSpeed: 25, 
+    maxSpeed: 5, 
     seek:{
         maxForce: 0.14
     },
@@ -234,7 +234,8 @@ export class Boid {
 
 export class Creature {
     constructor(){
-        const geometry = new THREE.CylinderGeometry(1,2,25,12);
+        this.headOut;
+        const geometry = new THREE.CylinderGeometry(0.1,0.2,0.2,0.1);
         //no need to rotate
         geometry.rotateX(THREE.Math.degToRad(90));
         var color = new THREE.Color(`hsl(${getRandomNum(360)}, 100%, 50%)`);
@@ -292,8 +293,9 @@ export class Creature {
         head.multiplyScalar(10);
         head.add(this.mesh.position);
         this.mesh.lookAt(head);
+        //this.headOut = head;
 
-        this.updateColor();
+        //this.updateColor();
     }
 
     updateColor()
