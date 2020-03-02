@@ -4,9 +4,12 @@ To launch this cd into the directory where index.html is located. Launch a serve
 
 
 ToDo list: 
-
-  alternative video texture
-  multiple sets of boid bodies
-  hft & babel implementation
-  gltf upload method(?)
+Markup: 
+  *alternative video texture - done
+  *multiple sets of boid bodies - done
+  *predator behaviour
+  *object reaction to input
+  *hft & babel implementation
+  *gltf upload method(?)
+  
   
