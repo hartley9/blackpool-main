@@ -7,6 +7,7 @@ ToDo list:
 Markup : *alternative video texture - done
          *multiple sets of boid bodies - done
          *predator behaviour
+         *alter speed of animation in proportion to acceleration
          *object reaction to input
          *hft & babel implementation
          *gltf upload method(?)
