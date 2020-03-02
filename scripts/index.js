@@ -2,7 +2,8 @@ import * as THREE from '../build/three.module.js';
 
 import {OrbitControls} from '../jsm/controls/OrbitControls.js';
 import {GLTFLoader} from '../jsm/loaders/GLTFLoader.js';
-import { Water } from '../jsm/objects/Water2.js'
+
+
 //GUI not yet used...
 import { GUI } from '../jsm/libs/dat.gui.module.js';
 
@@ -20,13 +21,13 @@ let W = window.innerWidth;
 let myH = 500;
 let myW = 500;
 
-let scene, camera, renderer, clock, water;
+let scene, camera, renderer, clock;
 let loader, object, mixer;
 
 //video texture variables
-let container;
+
 let video, videoImage, videoImageContext, videoTexture, movieScreen;
-let videoOn = true;
+let toggle = false;
 
 //Boxcontainer
 let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
@@ -34,15 +35,14 @@ let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
 /*
 Fish Variables 
 */
-
-
 /*
     Arrays for different model types.
     Make into javaScript object with multiple instance variable arrays
 */
 let models = {
     bream: [],
-    whale: [], 
+    whale: [],
+    discus: [], 
 }
 //Arrays for animations of objects
 //As with above, make into object, 
@@ -51,7 +51,7 @@ let mixers = [];
 let actions = [];
 
 //Bream
-let breamNum = 30;
+let breamNum = 10;
 //Intialise random starting locations for fish here
 let breamLocations = [];
 for (let i=0; i<breamNum; i++){
@@ -82,17 +82,16 @@ var gui = new GUI();
     Invoked as follows >
     loader.load('objects/bream/scene.gltf', gltf => onLoad( gltf, breamLocations[i], 0.025), onProgress, onError);
 */
-function loadModels(arr, mixers, actions, scene)
+function loadModels(mixers, actions, scene)
 {
     const loader = new GLTFLoader();
 
     //reusable functions ot set up the bream_models
-    const onLoad = ( gltf, position, scale ) => {
+    const onLoad = ( arr, gltf, position, scale ) => {
         
         let model = gltf;
         arr.push(model);
-       //console.log('No. of objects: ' + models.length);
-
+        
         var mixer = new THREE.AnimationMixer( model.scene );
         mixers.push( mixer );
         var action = mixer.clipAction(model.animations[ 0 ]);
@@ -104,7 +103,6 @@ function loadModels(arr, mixers, actions, scene)
         model.position.copy( position );
         model.scale.set(scale, scale, scale);
 
-
         //Aniimation and mixers
         scene.add(arr[(arr.length-1)].scene);
     };
@@ -114,27 +112,37 @@ function loadModels(arr, mixers, actions, scene)
     const onError = ( errorMessage ) => {console.log( errorMessage );};
 
     /* add models here */
-
-    //var bream;
+    // bream;
     for (let i=0; i<breamNum; i++)
     {
-        loader.load('objects/bream/scene.gltf', gltf => onLoad( gltf, breamLocations[i], 0.085), onProgress, onError);
-        console.log('bream locations: ' + breamLocations[i]);
+        loader.load('objects/bream/scene.gltf', gltf => onLoad( models.bream, gltf, breamLocations[i], 0.085), onProgress, onError);
+        //console.log('bream locations: ' + breamLocations[i]);
     }
-    /*
-    var loc = new THREE.Vector3(getRandomNum(-30, 30), getRandomNum(-30, 0), getRandomNum(-30, 30));
-    loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(gltf, loc, 0.05), onProgress, onError);
-    */
+    //whale
+    var loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
+    loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(models.whale, gltf, loc, 50), onProgress, onError);
+    
+    //discus
+    for (let i=0; i<breamNum; i++){
+        loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
+        loader.load('objects/discus/scene.gltf', gltf => onLoad(models.discus, gltf, loc, 0.50), onProgress, onError);
+    }
 }
 
 
 const getRandomNum = (max = 0 , min = 0) => Math.floor(Math.random() * (max + 1 - min)) + min;
 
-let creatureMeshGroup;
-let creatureNum = breamNum;
-let boid;
+let breamMeshGroup;
+let breamBoid;
+let breamRotate = new THREE.Vector3(80,0,0);
+
+let discusBoid;
+let discusMeshGroup;
+let discusRotate = new THREE.Vector3(80,0,80);
+
+let creatureNum = 15;
 //creatures
-const generateBoid = () => {
+const generateBoid = (boid, creatureMeshGroup) => {
     const creatures = [];
     scene.remove(creatureMeshGroup);
     creatureMeshGroup = new THREE.Group();
@@ -146,6 +154,7 @@ const generateBoid = () => {
     }
     boid = new Boid(creatures);
     scene.add(creatureMeshGroup);
+    return boid;
 };
 
 
@@ -218,7 +227,7 @@ function init()
     window.addEventListener('resize', onWindowResize, false);
  
     loader = new GLTFLoader(); //instantitate loader for gltf objects
-    loadModels(models.bream, mixers, actions, scene); //Function call to load all objects
+    loadModels(mixers, actions, scene); //Function call to load all objects
 
     //video
     backgroundTexture();
@@ -226,7 +235,9 @@ function init()
     boxContainer.mesh.position.y = -1000;
     scene.add(boxContainer);
     
-    generateBoid();
+    breamBoid = generateBoid(breamBoid, breamMeshGroup);
+    discusBoid = generateBoid(discusBoid, discusMeshGroup);
+    //generateBoid();
     
 }
 
@@ -246,8 +257,9 @@ function animate()
         if (mixers[i]) mixers[i].update( delta );
     }
     renderVideo();
-    boid.update(boxContainer);
-    moveModels(models.bream);
+    moveModels(models.bream, breamBoid, breamRotate);
+    moveModels(models.discus, discusBoid, discusRotate);
+    moveCrude(models.whale);
     //models.bream[0].scene.children[ 0 ].rotation.x += 5;
 
 }
@@ -260,8 +272,10 @@ animate();
 Other functions for updating other elements
 */
 var currModel;
-function moveModels(arr)
+function moveModels(arr, boid, rotate)
 {
+    boid.update(boxContainer); 
+
    for (let i =0; i<arr.length; i++)
    {
 
@@ -274,7 +288,9 @@ function moveModels(arr)
         currModel.rotation.x = boid.creatures[i].mesh.rotation.x;
         currModel.rotation.y = boid.creatures[i].mesh.rotation.y;
         currModel.rotation.z = boid.creatures[i].mesh.rotation.z;
-        currModel.rotateX(80);
+        currModel.rotateX(rotate.x);
+        currModel.rotateY(rotate.y);
+        currModel.rotateZ(rotate.z);
 
        
         //Rotation of model with movement
@@ -316,7 +332,7 @@ function webcamUpdate()
 
 //Function is playing video texture
 function renderVideo(){
-    if (videoOn === true){
+    if (toggle === true){
         /*play video texture at bottom */
         if ( video.readyState === video.HAVE_ENOUGH_DATA )
         {
@@ -347,8 +363,8 @@ function backgroundTexture()
     video.play();
 
     videoImage = document.createElement( 'canvas' );
-    videoImage.width = 1920;
-    videoImage.height = 1080;
+    videoImage.width = 960;
+    videoImage.height = 540;
 
     videoImageContext = videoImage.getContext( '2d' );
     videoImageContext.fillStyle = '#808080';
@@ -360,7 +376,7 @@ function backgroundTexture()
     
     var movieMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, overdraw: true, side: THREE.DoubleSide});
 
-    var movieGeometry = new THREE.PlaneBufferGeometry( 1920, 1080, myH, 4, 4);
+    var movieGeometry = new THREE.PlaneBufferGeometry( 960, 540, myH, 4, 4);
     movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
  
     movieScreen.position.set(0, -300, 0);
@@ -371,11 +387,18 @@ function backgroundTexture()
 
 function onKeyPress(){
     var keyCode = event.which;
+    //console.log(models.whale);
     if (keyCode == 87) {
-        console.log(movieScreen);
-        movieScreen.material.color = new THREE.Color(0xffffff);
-        console.log('keypress');
-        videoOn = false;
+        if (toggle===true){
+          //  console.log(movieScreen);
+           // scene.remove(movieScreen);
+            console.log('keypress');
+            toggle = false;
+        } else {
+            //backgroundTexture();
+            //scene.add(movieScreen);
+            toggle = true;
+        }
 
         movieScreen.material.color = new THREE.Color(0xffffff);
         movieScreen.material.map = null;
@@ -403,7 +426,43 @@ function printCoords()
        // console.log(temp_arr);
     }
 }
+var breamX = 3.5;
+function moveCrude(models){
+    
+    for (let i = 0; i < models.length; i++)
+    {
+        if (models[i] !== undefined){
+            currModel = models[ i ].scene.children[ 0 ];
+            currModel.position.x = currModel.position.x += breamX;
+            
+            if (currModel.position.x >= 1920/2){
+                breamX = -3.5;
+                changeRotation(models, 1);
+            } else if (currModel.position.x <= -(1920/2))
+            {
+                breamX = 3.5;
+                changeRotation(models, 0);
+                
+            }
+        }
+    }
+    
+}
 
+function changeRotation(models, type)
+{
+    for (let i = 0; i<models.length; i++){
+        var model = models[i].scene.children[ 0 ]; 
+        if (type === 0)
+        {
+            model.rotation.z = -80;
+        }
+        else if (type === 1)
+        {
+            model.rotation.z = 80;
+        }
+    }   
+}
 
 
 

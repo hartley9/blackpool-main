@@ -1,9 +1,9 @@
 import * as THREE from '../build/three.module.js';
 
 let mainParams = {
-    maxSpeed: 5, 
+    maxSpeed: 15, 
     seek:{
-        maxForce: 0.14
+        maxForce: 0.15
     },
 
     align: {
@@ -12,7 +12,7 @@ let mainParams = {
     },
 
     separate: {
-        effectiveRange: 70, 
+        effectiveRange: 85, 
         maxForce: 0.2
     },
 
