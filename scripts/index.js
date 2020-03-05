@@ -3,7 +3,6 @@ import * as THREE from '../build/three.module.js';
 import {OrbitControls} from '../jsm/controls/OrbitControls.js';
 import {GLTFLoader} from '../jsm/loaders/GLTFLoader.js';
 
-
 //GUI not yet used...
 import { GUI } from '../jsm/libs/dat.gui.module.js';
 
@@ -25,20 +24,16 @@ let scene, camera, renderer, clock;
 let loader, object, mixer;
 
 //video texture variables
-
 let video, videoImage, videoImageContext, videoTexture, movieScreen;
 let toggle = false;
 
-//Boxcontainer
+//Boxcontainer for boids
 let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
 
 /*
 Fish Variables 
 */
-/*
-    Arrays for different model types.
-    Make into javaScript object with multiple instance variable arrays
-*/
+//Fish models
 let models = {
     bream: [],
     whale: [],
@@ -51,7 +46,7 @@ let mixers = [];
 let actions = [];
 
 //Bream
-let breamNum = 10;
+let breamNum = 20;
 //Intialise random starting locations for fish here
 let breamLocations = [];
 for (let i=0; i<breamNum; i++){
@@ -59,11 +54,14 @@ for (let i=0; i<breamNum; i++){
     breamLocations.push(new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60)));
 }
 
+/*
+// TO BE IMPLEMENTED
 //variables for curve
 let matrix = new THREE.Matrix4();
 let axis = new THREE.Vector3( );
 let up = new THREE.Vector3( 0, 1, 0 );
 let pt, radians, tangent;
+*/
 
 //GUI
 var gui = new GUI();
@@ -78,7 +76,7 @@ var gui = new GUI();
 /*
     Used to load GLTF objects, 
     takes array where object will be stored as a parameter.
-
+-----------------------------------------------------------------------------------------
     Invoked as follows >
     loader.load('objects/bream/scene.gltf', gltf => onLoad( gltf, breamLocations[i], 0.025), onProgress, onError);
 */
@@ -120,7 +118,7 @@ function loadModels(mixers, actions, scene)
     }
     //whale
     var loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
-    loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(models.whale, gltf, loc, 50), onProgress, onError);
+    loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(models.whale, gltf, loc, 30), onProgress, onError);
     
     //discus
     for (let i=0; i<breamNum; i++){
@@ -140,7 +138,7 @@ let discusBoid;
 let discusMeshGroup;
 let discusRotate = new THREE.Vector3(80,0,80);
 
-let creatureNum = 15;
+let creatureNum = breamNum;
 //creatures
 const generateBoid = (boid, creatureMeshGroup) => {
     const creatures = [];
@@ -288,17 +286,20 @@ function moveModels(arr, boid, rotate)
         currModel.rotation.x = boid.creatures[i].mesh.rotation.x;
         currModel.rotation.y = boid.creatures[i].mesh.rotation.y;
         currModel.rotation.z = boid.creatures[i].mesh.rotation.z;
+        
         currModel.rotateX(rotate.x);
         currModel.rotateY(rotate.y);
         currModel.rotateZ(rotate.z);
-
+        
        
         //Rotation of model with movement
         /*
+
         var head = boid.creatures[i].velocity.clone();
         head.multiplyScalar(10);
         head.add(boid.creatures[i].mesh.position);
         currModel.lookAt(head);
+    
         */
    }
 
@@ -426,7 +427,7 @@ function printCoords()
        // console.log(temp_arr);
     }
 }
-var breamX = 3.5;
+var breamX = 10.5;
 function moveCrude(models){
     
     for (let i = 0; i < models.length; i++)

@@ -1,7 +1,7 @@
 import * as THREE from '../build/three.module.js';
 
 let mainParams = {
-    maxSpeed: 15, 
+    maxSpeed: 35, 
     seek:{
         maxForce: 0.15
     },
