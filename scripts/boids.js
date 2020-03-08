@@ -68,7 +68,7 @@ export class Boid {
             }
         };
     }
-
+    //
     update(boxContainer){
         this.creatures.forEach(creature => {
             //boid
@@ -86,7 +86,7 @@ export class Boid {
             creature.update();
         });
     }
-
+    //
     setBoost(){
         this.creatures.forEach(creature => {
             if (creature.boost.length() === 0){
@@ -98,7 +98,7 @@ export class Boid {
             }
         });
     }
-    
+    //
     seek(currentCreature, target = new THREE.Vector3()){
         const maxSpeed = this.params.maxSpeed;
         const maxForce = this.params.seek.maxForce; 
@@ -115,6 +115,7 @@ export class Boid {
         return steerVector;
     }
 
+    //
     align(currentCreature){
         const sumVector = new THREE.Vector3();
         let cnt = 0;
@@ -235,7 +236,7 @@ export class Boid {
 export class Creature {
     constructor(){
         this.headOut;
-        const geometry = new THREE.CylinderGeometry(0.1,0.2,0.2,0.1);
+        const geometry = new THREE.CylinderGeometry(1, 8, 25, 12);
         //no need to rotate
         geometry.rotateX(THREE.Math.degToRad(90));
         var color = new THREE.Color(`hsl(${getRandomNum(360)}, 100%, 50%)`);

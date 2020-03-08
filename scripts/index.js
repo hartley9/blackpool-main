@@ -10,6 +10,9 @@ import {Boid} from './boids.js';
 import {Creature} from './boids.js';
 import {BoxContainer} from './boids.js';
 
+//seeker/predator import
+import {SeekingCreature} from './SeekingCreature.js';
+
 //Import class for storing objects and all associated data
 //import glObj from '../glObj.js';
 
@@ -29,6 +32,10 @@ let toggle = false;
 
 //Boxcontainer for boids
 let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
+
+
+//Keep track of seekers
+let seekers = [];
 
 /*
 Fish Variables 
@@ -54,6 +61,8 @@ for (let i=0; i<breamNum; i++){
     breamLocations.push(new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60)));
 }
 
+var seeker;
+
 /*
 // TO BE IMPLEMENTED
 //variables for curve
@@ -70,7 +79,7 @@ var gui = new GUI();
 (function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
 
 
-//
+//boids
 
 //load object functions
 /*
@@ -96,7 +105,7 @@ function loadModels(mixers, actions, scene)
         action.play();
         actions.push(action);
         
-        //
+        //adds the models to the array
         model = arr[(arr.length-1)].scene.children[ 0 ];
         model.position.copy( position );
         model.scale.set(scale, scale, scale);
@@ -154,7 +163,6 @@ const generateBoid = (boid, creatureMeshGroup) => {
     scene.add(creatureMeshGroup);
     return boid;
 };
-
 
 function getRandomArbitrary(min, max) {
 return Math.random() * (max - min) + min;
@@ -232,10 +240,15 @@ function init()
 
     boxContainer.mesh.position.y = -1000;
     scene.add(boxContainer);
-    
+    //Boids...
+    //One boid per type of fish 
     breamBoid = generateBoid(breamBoid, breamMeshGroup);
     discusBoid = generateBoid(discusBoid, discusMeshGroup);
-    //generateBoid();
+
+    //predator/seeker behaviour
+    seeker = new SeekingCreature(getRandomArbitrary(-100,100), getRandomArbitrary(-30,-10), getRandomArbitrary(-100,100), scene);
+    seekers.push(seeker);
+
     
 }
 
@@ -254,11 +267,19 @@ function animate()
     {
         if (mixers[i]) mixers[i].update( delta );
     }
+    
+    //Render video
     renderVideo();
+    
+    //Model Movement
+    
     moveModels(models.bream, breamBoid, breamRotate);
     moveModels(models.discus, discusBoid, discusRotate);
+    
     moveCrude(models.whale);
-    //models.bream[0].scene.children[ 0 ].rotation.x += 5;
+
+    //Update seeker 
+    updateSeekers();
 
 }
 
@@ -270,7 +291,7 @@ animate();
 Other functions for updating other elements
 */
 var currModel;
-function moveModels(arr, boid, rotate)
+function moveModels(arr, boid, rotation)
 {
     boid.update(boxContainer); 
 
@@ -287,9 +308,9 @@ function moveModels(arr, boid, rotate)
         currModel.rotation.y = boid.creatures[i].mesh.rotation.y;
         currModel.rotation.z = boid.creatures[i].mesh.rotation.z;
         
-        currModel.rotateX(rotate.x);
-        currModel.rotateY(rotate.y);
-        currModel.rotateZ(rotate.z);
+        currModel.rotateX(rotation.x);
+        currModel.rotateY(rotation.y);
+        currModel.rotateZ(rotation.z);
         
        
         //Rotation of model with movement
@@ -303,6 +324,14 @@ function moveModels(arr, boid, rotate)
         */
    }
 
+}
+
+function updateSeekers()
+{
+    for (var i = 0; i< seekers.length; i++)
+    {
+        seekers[i].update();
+    }
 }
 
 function webcamUpdate()
