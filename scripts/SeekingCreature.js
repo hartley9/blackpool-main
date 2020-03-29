@@ -35,20 +35,22 @@ export class SeekingCreature
         });
 
         this.mesh = new THREE.Mesh( this.geometry, material );
-
+        var pos = new THREE.Vector3(x, y, z);
+        this.mesh.position.copy(pos);
         this.scene.add(this.mesh);
         console.log('created seeker');
     }
 
     //Standard 'Euler integration' motion model
-    update()
+    update(target)
     {
+        this.seek(target);
         this.velocity.add(this.acceleration);
         this.velocity.clampLength(0, this.maxspeed);
         this.location.add(this.velocity);
 
         //update object position
-        this.mesh.position.add(this.velocity);
+        this.mesh.position.add(this.location);
 
         //reset acceleration
         this.acceleration.multiply(0);
@@ -69,7 +71,7 @@ export class SeekingCreature
     seek(target)
     {
         var desired = new THREE.Vector3();
-        desired.subVectors(target, this.location);
+        desired.subVectors(target, this.mesh.position);
         desired.normalize();
         desired.multiply(this.maxspeed);
        
@@ -84,10 +86,8 @@ export class SeekingCreature
     display()
     {
         //calculate the heading of the object
-        //fill blah blah bhah
+        //fill blah blah blah
         //place object at the location
-
-
     }
 
 }

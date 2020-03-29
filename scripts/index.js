@@ -2,13 +2,12 @@ import * as THREE from '../build/three.module.js';
 
 import {OrbitControls} from '../jsm/controls/OrbitControls.js';
 import {GLTFLoader} from '../jsm/loaders/GLTFLoader.js';
-
 //GUI not yet used...
 import { GUI } from '../jsm/libs/dat.gui.module.js';
-
 import {Boid} from './boids.js';
 import {Creature} from './boids.js';
 import {BoxContainer} from './boids.js';
+import {Walker} from './Walker.js'
 
 //seeker/predator import
 import {SeekingCreature} from './SeekingCreature.js';
@@ -23,19 +22,24 @@ let W = window.innerWidth;
 let myH = 500;
 let myW = 500;
 
-let scene, camera, renderer, clock;
+let scene, mainCamera, renderer, clock;
 let loader, object, mixer;
+
+let coords; //mouse coordinates
 
 //video texture variables
 let video, videoImage, videoImageContext, videoTexture, movieScreen;
 let toggle = false;
 
 //Boxcontainer for boids
-let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
+let boxContainer = new BoxContainer(820, 800, 800, 0x0000ff);
 
 
 //Keep track of seekers
 let seekers = [];
+
+//walkers
+let walkers = [];
 
 /*
 Fish Variables 
@@ -44,7 +48,8 @@ Fish Variables
 let models = {
     bream: [],
     whale: [],
-    discus: [], 
+    discus: [],
+    flage: [], 
 }
 //Arrays for animations of objects
 //As with above, make into object, 
@@ -53,7 +58,7 @@ let mixers = [];
 let actions = [];
 
 //Bream
-let breamNum = 20;
+let breamNum = 15;
 //Intialise random starting locations for fish here
 let breamLocations = [];
 for (let i=0; i<breamNum; i++){
@@ -78,6 +83,35 @@ var gui = new GUI();
 //Stats
 (function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
 
+//Array to hold the camera views
+let views = [];
+
+function View( canvas, fullWidth, fullHeight, viewX, viewY, viewWidth, viewHeight ) {
+
+    canvas.width = viewWidth * window.devicePixelRatio;
+    canvas.height = viewHeight * window.devicePixelRatio;
+
+    var context = canvas.getContext( '2d' );
+
+    var camera = new THREE.PerspectiveCamera( 20, viewWidth / viewHeight, 1, 10000 );
+
+
+    camera.setViewOffset( fullWidth, fullHeight, viewX, viewY, viewWidth, viewHeight );
+    camera.position.z = 1800;
+
+    this.render = function () {
+
+        camera.position.x = (camera.position.x ) * 0.05;
+        camera.position.y = (camera.position.y ) * 0.05;
+        camera.lookAt( scene.position );
+
+        renderer.render( scene, camera );
+
+        context.drawImage( renderer.domElement, 0, 0 );
+
+    };
+
+}
 
 //boids
 
@@ -110,6 +144,7 @@ function loadModels(mixers, actions, scene)
         model.position.copy( position );
         model.scale.set(scale, scale, scale);
 
+        //console.log(dumpObject(arr[(arr.length-1)].scene));
         //Aniimation and mixers
         scene.add(arr[(arr.length-1)].scene);
     };
@@ -125,6 +160,7 @@ function loadModels(mixers, actions, scene)
         loader.load('objects/bream/scene.gltf', gltf => onLoad( models.bream, gltf, breamLocations[i], 0.085), onProgress, onError);
         //console.log('bream locations: ' + breamLocations[i]);
     }
+    
     //whale
     var loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
     loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(models.whale, gltf, loc, 30), onProgress, onError);
@@ -134,6 +170,7 @@ function loadModels(mixers, actions, scene)
         loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
         loader.load('objects/discus/scene.gltf', gltf => onLoad(models.discus, gltf, loc, 0.50), onProgress, onError);
     }
+    
 }
 
 
@@ -147,15 +184,23 @@ let discusBoid;
 let discusMeshGroup;
 let discusRotate = new THREE.Vector3(80,0,80);
 
+let thirdBoid;
+let thirdMeshGroup;
+let thirdRoate = new THREE.Vector3(0,0,0);
+
+let flageBoid; 
+let flageMeshGroup;
+let flageRotate = new THREE.Vector3(0,0,0);
+
 let creatureNum = breamNum;
 //creatures
-const generateBoid = (boid, creatureMeshGroup) => {
+const generateBoid = (boid, boidSize, creatureMeshGroup, color, geo) => {
     const creatures = [];
     scene.remove(creatureMeshGroup);
     creatureMeshGroup = new THREE.Group();
-    for (let i = 0; i<creatureNum; i++)
+    for (let i = 0; i<boidSize; i++)
     {
-        const creature = new Creature();
+        const creature = new Creature(color, geo);
         creatureMeshGroup.add(creature.mesh);
         creatures.push(creature);
     }
@@ -189,11 +234,11 @@ function init()
     scene = new THREE.Scene();
     
     //Camera
-    camera = new THREE.PerspectiveCamera(55,
+    mainCamera = new THREE.PerspectiveCamera(55,
         window.innerWidth / window.innerHeight, 
         0.1, 
         2500);
-    camera.position.set(0,1500,0);
+    mainCamera.position.set(0,1500,0);
 
     //Renderer
     renderer = new THREE.WebGLRenderer({antialias:true});
@@ -201,7 +246,7 @@ function init()
 
     document.body.appendChild(renderer.domElement);
     
-    document.body.addEventListener('click', printCoords, true);
+   //document.body.addEventListener('click', printCoords, true);
     document.body.addEventListener('mousemove', onMouseMove, true);
     document.body.addEventListener('keydown', onKeyPress, true);
     
@@ -214,8 +259,8 @@ function init()
 	scene.add( ambientLight );
 
     var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
-    camera.add( pointLight );
-    scene.add( camera );
+    mainCamera.add( pointLight );
+    scene.add( mainCamera );
    
     scene.background = new THREE.Color( 0xffffff );
 
@@ -224,31 +269,61 @@ function init()
     scene.add( axesHelper );
 
     //controls
-    var controls = new OrbitControls( camera, renderer.domElement);
+    var controls = new OrbitControls( mainCamera, renderer.domElement);
     
     //setting the camera position
     
-
     //event listeniner for window resize
     window.addEventListener('resize', onWindowResize, false);
  
     loader = new GLTFLoader(); //instantitate loader for gltf objects
-    loadModels(mixers, actions, scene); //Function call to load all objects
+    //loadModels(mixers, actions, scene); //Function call to load all objects
 
     //video
     backgroundTexture();
 
-    boxContainer.mesh.position.y = -1000;
+    boxContainer.mesh.position.y = -1500;
     scene.add(boxContainer);
+    
     //Boids...
+    //create geometry for the boids
     //One boid per type of fish 
-    breamBoid = generateBoid(breamBoid, breamMeshGroup);
-    discusBoid = generateBoid(discusBoid, discusMeshGroup);
+    //Cylinder geometries
+    const cylGeo = new THREE.CylinderGeometry(1, 8, 25, 12);
+    cylGeo.rotateX(THREE.Math.degToRad(90));
+    breamBoid = generateBoid(breamBoid, 25, breamMeshGroup, 0xff522c, cylGeo);
+    discusBoid = generateBoid(discusBoid, 25, discusMeshGroup, 0x22bddd, cylGeo);
+    thirdBoid = generateBoid(thirdBoid, 25, thirdMeshGroup, 0xe71cad, cylGeo);
+    //Dinoflaggelites slow moing
+    const sphGeo = new THREE.SphereGeometry(7, 7, 7);
+    flageBoid = generateBoid(flageBoid, 50, flageMeshGroup, 0x82f63f, sphGeo);
+    //Change movement behaviour of flageBoid
+    flageBoid.params.maxSpeed = 0.5;
+    flageBoid.params.separate.maxForce = 0.5;
+    flageBoid.params.separate.effectiveRange = 75;
+
+    
+    //flageBoid.params.separate.effectiveRange = 20;
+    models.flage.length = 50;
+    
+    //flageBoid = generateBoid(flageBoid, flageMeshGroup, 0x82f63f, cylGeo);
+    
+
 
     //predator/seeker behaviour
-    seeker = new SeekingCreature(getRandomArbitrary(-100,100), getRandomArbitrary(-30,-10), getRandomArbitrary(-100,100), scene);
-    seekers.push(seeker);
+    for (let i =0; i<10; i++){
+       // seeker = new SeekingCreature(getRandomArbitrary(-100,100), getRandomArbitrary(-30,-10), getRandomArbitrary(-100,100), scene);
+    }
 
+    //seekers.push(seeker);
+    
+    //Create walkers
+    for (var i = 0; i<5; i++)
+    {
+        let w = new Walker(1920,1080, scene);
+        walkers.push(w);
+       // scene.add(w.plane);
+    }
     
 }
 
@@ -257,8 +332,8 @@ LOOPING - Animate() function
 */
 function animate()
 {   
-    window.requestAnimationFrame( animate );
-    renderer.render( scene, camera );
+ 
+    renderer.render( scene, mainCamera );
     //moveModels(models.bream);
     
     //Animations
@@ -271,16 +346,27 @@ function animate()
     //Render video
     renderVideo();
     
-    //Model Movement
-    
+    //Model Movement 
     moveModels(models.bream, breamBoid, breamRotate);
     moveModels(models.discus, discusBoid, discusRotate);
+    moveModels(models.flage, flageBoid, flageRotate);
+    moveModels(models.flage, thirdBoid, thirdRoate);
     
-    moveCrude(models.whale);
+    //moveCrude(models.whale);
 
     //Update seeker 
-    updateSeekers();
+    coords = new THREE.Vector2(mouse.x, 0, mouse.y);
+   // updateSeekers(coords);
 
+   for (let i = 0; i<5 ; i++)
+   {
+       //walkers[i].move(10);
+       walkers[i].moveAlongCurve();
+   }
+
+   views.forEach(v => v.render()); //Update each of the camera views
+   
+   window.requestAnimationFrame( animate );
 }
 
 //Main
@@ -298,6 +384,7 @@ function moveModels(arr, boid, rotation)
    for (let i =0; i<arr.length; i++)
    {
 
+    if (arr[i] !== null && arr[i] !== undefined){
         //Move fish with creature
         currModel = arr[ i ].scene.children[ 0 ];
         currModel.position.x = boid.creatures[i].mesh.position.x;
@@ -322,21 +409,24 @@ function moveModels(arr, boid, rotation)
         currModel.lookAt(head);
     
         */
-   }
+    }
+    }
 
 }
 
-function updateSeekers()
+function updateSeekers(target)
 {
+    
     for (var i = 0; i< seekers.length; i++)
     {
-        seekers[i].update();
+       // console.log('updating...');
+        seekers[i].update(target);
     }
 }
 
 function webcamUpdate()
 {
-    if ( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
+    if ( navi444gator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
 
         var constraints = { video: { width: 1280, height: 720, facingMode: 'user' } };
 
@@ -406,10 +496,10 @@ function backgroundTexture()
     
     var movieMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, overdraw: true, side: THREE.DoubleSide});
 
-    var movieGeometry = new THREE.PlaneBufferGeometry( 960, 540, myH, 4, 4);
+    var movieGeometry = new THREE.PlaneBufferGeometry( 1920, 1080, myH, 4, 4);
     movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
  
-    movieScreen.position.set(0, -300, 0);
+    movieScreen.position.set(0, -600, 0);
     movieScreen.rotation.x = Math.PI * - 0.5;
     scene.add(movieScreen);
     video.play();
@@ -447,6 +537,7 @@ function addGUI(){
     gui.add(breamBoids, "separationForce", 0, 0.25);
 }
 
+/*
 function printCoords()
 {
     var temp_arr = [];
@@ -455,7 +546,10 @@ function printCoords()
         temp_arr.push(breamBoids.boids[i].position);
        // console.log(temp_arr);
     }
+    console.log('clicked');
+    coneole.log(dumpObject(models.bream[0].scene));
 }
+*/
 var breamX = 10.5;
 function moveCrude(models){
     
@@ -496,8 +590,7 @@ function changeRotation(models, type)
 
 
 
-/*
-CURRENTLY UNUSED/PREVIOUSLY USED FUNCTIONS
+
 
 
 //dump gltf object tree
@@ -513,7 +606,8 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
     return lines;
 }
 
-
+/*
+CURRENTLY UNUSED/PREVIOUSLY USED FUNCTIONS
 //Function to visualise curve for which a given object will follow repeatedly
     
        function makeCurve(){
