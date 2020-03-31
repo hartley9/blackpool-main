@@ -18,6 +18,9 @@ import {SeekingCreature} from './SeekingCreature.js';
 let H = window.innerHeight;
 let W = window.innerWidth;
 
+let windowHalfX = W / 2;
+let windowHalfY = H / 2;
+
 //user set dimensions
 let myH = 500;
 let myW = 500;
@@ -32,7 +35,7 @@ let video, videoImage, videoImageContext, videoTexture, movieScreen;
 let toggle = false;
 
 //Boxcontainer for boids
-let boxContainer = new BoxContainer(820, 800, 800, 0x0000ff);
+let boxContainer = new BoxContainer(1500, 1500, 1500, 0x0000ff);
 
 
 //Keep track of seekers
@@ -93,17 +96,24 @@ function View( canvas, fullWidth, fullHeight, viewX, viewY, viewWidth, viewHeigh
 
     var context = canvas.getContext( '2d' );
 
-    var camera = new THREE.PerspectiveCamera( 20, viewWidth / viewHeight, 1, 10000 );
+    var camera = new THREE.PerspectiveCamera( 45, viewWidth / viewHeight, 1, 5000 );
 
+    var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+    camera.add( pointLight );
 
     camera.setViewOffset( fullWidth, fullHeight, viewX, viewY, viewWidth, viewHeight );
-    camera.position.z = 1800;
+    camera.position.y += 1000;
+    camera.rotation.x = Math.PI * - 0.5;
+   // camera.position.x += 700;
 
     this.render = function () {
 
-        camera.position.x = (camera.position.x ) * 0.05;
-        camera.position.y = (camera.position.y ) * 0.05;
-        camera.lookAt( scene.position );
+       // camera.position.x = (camera.position.x ) * 0.05;
+        //camera.position.y = (camera.position.y ) * 0.05;
+        //console.log('pos:' + scene.position);
+        //camera.lookAt( 0,0,0 );
+        
+       // camera.lookAt( scene.position );
 
         renderer.render( scene, camera );
 
@@ -230,25 +240,47 @@ function onMouseMove( event ) {
 
 function init()
 {
+
+    var canvas1 = document.getElementById( 'canvas1' );
+    var canvas2 = document.getElementById( 'canvas2' );
+    var canvas3 = document.getElementById( 'canvas3' );
+
+    var w = 700, h = 700;
+
+    var fullWidth = w * 3; //w * x. Where x is no. of columns
+    var fullHeight = h * 1; ////h * x. Where x is no. of rows
+
+    views.push( new View( canvas1, fullWidth, fullHeight, w * 0, h * 0, w, h ) );
+    views.push( new View( canvas2, fullWidth, fullHeight, w * 1, h * 0, w, h ) );
+    views.push( new View( canvas3, fullWidth, fullHeight, w * 2, h * 0, w, h ) );
     //Scene
     scene = new THREE.Scene();
     
     //Camera
+    /*
     mainCamera = new THREE.PerspectiveCamera(55,
         window.innerWidth / window.innerHeight, 
         0.1, 
         2500);
     mainCamera.position.set(0,1500,0);
+    */
 
     //Renderer
     renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    document.body.appendChild(renderer.domElement);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(w, h);
+    
+    var page = document.getElementById('mainDiv');
+    if (page !== null && page !== undefined)
+    {
+        page.appendChild(renderer.domElement);   
+    }
+    
     
    //document.body.addEventListener('click', printCoords, true);
     document.body.addEventListener('mousemove', onMouseMove, true);
     document.body.addEventListener('keydown', onKeyPress, true);
+
     
     //clock for animations
     clock = new THREE.Clock();
@@ -258,23 +290,22 @@ function init()
     var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.4 );
 	scene.add( ambientLight );
 
-    var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
-    mainCamera.add( pointLight );
+    
     scene.add( mainCamera );
    
     scene.background = new THREE.Color( 0xffffff );
 
     //Axis helper
     var axesHelper = new THREE.AxesHelper( 5000 );
-    scene.add( axesHelper );
+    //scene.add( axesHelper );
 
     //controls
-    var controls = new OrbitControls( mainCamera, renderer.domElement);
+   // var controls = new OrbitControls( mainCamera, renderer.domElement);
     
     //setting the camera position
     
     //event listeniner for window resize
-    window.addEventListener('resize', onWindowResize, false);
+    //window.addEventListener('resize', onWindowResize, false);
  
     loader = new GLTFLoader(); //instantitate loader for gltf objects
     //loadModels(mixers, actions, scene); //Function call to load all objects
@@ -308,7 +339,10 @@ function init()
     
     //flageBoid = generateBoid(flageBoid, flageMeshGroup, 0x82f63f, cylGeo);
     
-
+    
+    var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+    scene.add( pointLight );
+    pointLight.position.set(0,1000,0);
 
     //predator/seeker behaviour
     for (let i =0; i<10; i++){
@@ -333,7 +367,7 @@ LOOPING - Animate() function
 function animate()
 {   
  
-    renderer.render( scene, mainCamera );
+   // renderer.render( scene, mainCamera );
     //moveModels(models.bream);
     
     //Animations
@@ -465,13 +499,14 @@ function renderVideo(){
         }
     }
 }
-
+/*
 function onWindowResize()
 {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
+*/
 
 
 function backgroundTexture()
@@ -496,12 +531,13 @@ function backgroundTexture()
     
     var movieMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, overdraw: true, side: THREE.DoubleSide});
 
-    var movieGeometry = new THREE.PlaneBufferGeometry( 1920, 1080, myH, 4, 4);
+    var movieGeometry = new THREE.PlaneBufferGeometry( 1980+1000, 1080, 100, 4, 4);
     movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
  
-    movieScreen.position.set(0, -600, 0);
+    movieScreen.position.set(0, -200, 0);
     movieScreen.rotation.x = Math.PI * - 0.5;
     scene.add(movieScreen);
+    //console.log('ms pos' + movieScreen.position.x + movieScreen.position.y + movieScreen.position.z);
     video.play();
 }
 
