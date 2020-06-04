@@ -2,6 +2,7 @@
 class for seeker/predator behaviour
 */
 import * as THREE from '../build/three.module.js';
+import {getRandomNum} from './utilFunctions.js';
 export function Predator(id)
 {
 
@@ -11,7 +12,7 @@ export function Predator(id)
     
     this.pos = new THREE.Vector3(); 
     this.vel = new THREE.Vector3();
-    this.vel.set(getRandomArbitrary(-2, 2), getRandomArbitrary(-2, 2), getRandomArbitrary(-2, 2));
+    this.vel.set(getRandomNum(-2, 2), getRandomNum(-2, 2), getRandomNum(-2, 2));
     this.acc = new THREE.Vector3();
 
     this.maxspeed = 5;
@@ -19,12 +20,14 @@ export function Predator(id)
 
     this.perception = 20; //how far can you see
 
+    //Booleans used for checking predator attention
     this.distThresh = 5;
     this.bored = false;
     this.boredTimer = false;
 
 
     var geometry = new THREE.CylinderGeometry(1, 8, 25, 12);
+    //
     geometry.rotateX(THREE.Math.degToRad(90));
     const material = new THREE.MeshLambertMaterial({
         wireframe: false, 
@@ -46,7 +49,6 @@ Predator.prototype.behaviours = function()
     var seek = this.seek(this.target);
     this.applyForce(seek);
 
-    //var avoid = 
 }
 
 Predator.prototype.applyForce = function(f)
@@ -130,12 +132,11 @@ Predator.prototype.checkAttention = function(distance)
         if (distance < this.distThresh && this.bored===false)
         {
                 //startTimer for random duration - then reassign target
-                let time = getRandomArbitrary(7000, 20000);
+                let time = getRandomNum(3000, 10000);
                 let t = setTimeout(() => {
                     this.newPreyId(this.numPrey)
                 }, time);  
                 this.boredTimer = true; 
-                console.log('the timer is done');
                 
         }
     }
@@ -193,8 +194,9 @@ Predator.prototype.avoidPredators = function(predators)
         let pos = predators[i].mesh.position;
         sumVec.add(this.avoidPred(pos))
     }
+    return sumVec;
 }
-
+//look at this
 Predator.prototype.avoidPred = function(pos) 
 {
     this.mesh.geometry.computeBoundingSphere();
@@ -211,9 +213,3 @@ Predator.prototype.avoidPred = function(pos)
         return steerVector;
     } else{return new THREE.Vector3(0,0,0);}
 }
-
-function getRandomArbitrary(min, max) {
-    return Math.random() * (max - min) + min;
-    }
-
-

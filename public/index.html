@@ -4,11 +4,7 @@
 <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
     <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title></title>
-        <meta name="description" content="">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="">
         <style>
             h2 {text-align:center;}
@@ -54,7 +50,7 @@
 			#container {
 				margin-left: auto;
 				margin-right: auto;
-				width: 604px;  /* 300*2 + border; */
+				width:100%;
 			}
 
 			#container div {
@@ -83,16 +79,13 @@
 			}
         </style>
     </head>
-    <body>
+    <body >
 
 		
    
     <div id="info">
-    <h2>Press 'w' to play video. <br>
-        Mouse controls can be used to move around.
-    </h2>
-    To navigate to the view the full canvas <a href = "./dev.html">click here</a>.
-    </div>
+	
+	</div>
 
     <div id="centerer">
         <div id="centerer-cell">
@@ -107,9 +100,15 @@
 	</div>
 	
 	<script src="/socket.io/socket.io.js"></script>
-		<script src="/scripts/setup.js"></script>
-		<script src="./scripts/broadcast.js"></script>
-		<script type="module" src="./scripts/index.js"></script>
+	<script src="/scripts/setup.js"></script>
+	<script src="/scripts/getStats.js"></script>
+	<script type="module" src="./scripts/broadcast.js"></script>
+	<script type="module" src="./scripts/index.js"></script>
 		
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js"></script>
+	<div class="container">
+		<canvas id='myChart'></canvas>
+	</div>
     </body>
 </html>
