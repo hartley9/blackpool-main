@@ -2,13 +2,15 @@ import * as THREE from '../build/three.module.js';
 
 import {OrbitControls} from '../jsm/controls/OrbitControls.js';
 import {GLTFLoader} from '../jsm/loaders/GLTFLoader.js';
-
 //GUI not yet used...
 import { GUI } from '../jsm/libs/dat.gui.module.js';
-
 import {Boid} from './boids.js';
 import {Creature} from './boids.js';
 import {BoxContainer} from './boids.js';
+import {Walker} from './Walker.js'
+
+//seeker/predator import
+import {SeekingCreature} from './SeekingCreature.js';
 
 //Import class for storing objects and all associated data
 //import glObj from '../glObj.js';
@@ -16,19 +18,31 @@ import {BoxContainer} from './boids.js';
 let H = window.innerHeight;
 let W = window.innerWidth;
 
+let windowHalfX = W / 2;
+let windowHalfY = H / 2;
+
 //user set dimensions
 let myH = 500;
 let myW = 500;
 
-let scene, camera, renderer, clock;
+let scene, mainCamera, renderer, clock;
 let loader, object, mixer;
+
+let coords; //mouse coordinates
 
 //video texture variables
 let video, videoImage, videoImageContext, videoTexture, movieScreen;
 let toggle = false;
 
 //Boxcontainer for boids
-let boxContainer = new BoxContainer(myW+300, myH+300, 1000, 0x0000ff);
+let boxContainer = new BoxContainer(1500, 1500, 1500, 0x0000ff);
+
+
+//Keep track of seekers
+let seekers = [];
+
+//walkers
+let walkers = [];
 
 /*
 Fish Variables 
@@ -37,7 +51,8 @@ Fish Variables
 let models = {
     bream: [],
     whale: [],
-    discus: [], 
+    discus: [],
+    flage: [], 
 }
 //Arrays for animations of objects
 //As with above, make into object, 
@@ -46,13 +61,15 @@ let mixers = [];
 let actions = [];
 
 //Bream
-let breamNum = 20;
+let breamNum = 15;
 //Intialise random starting locations for fish here
 let breamLocations = [];
 for (let i=0; i<breamNum; i++){
    //                                                           x                           y                          z
     breamLocations.push(new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60)));
 }
+
+var seeker;
 
 /*
 // TO BE IMPLEMENTED
@@ -69,8 +86,44 @@ var gui = new GUI();
 //Stats
 (function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
 
+//Array to hold the camera views
+let views = [];
 
-//
+function View( canvas, fullWidth, fullHeight, viewX, viewY, viewWidth, viewHeight ) {
+
+    canvas.width = viewWidth * window.devicePixelRatio;
+    canvas.height = viewHeight * window.devicePixelRatio;
+
+    var context = canvas.getContext( '2d' );
+
+    var camera = new THREE.PerspectiveCamera( 45, viewWidth / viewHeight, 1, 5000 );
+
+    var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+    camera.add( pointLight );
+
+    camera.setViewOffset( fullWidth, fullHeight, viewX, viewY, viewWidth, viewHeight );
+    camera.position.y += 1000;
+    camera.rotation.x = Math.PI * - 0.5;
+   // camera.position.x += 700;
+
+    this.render = function () {
+
+       // camera.position.x = (camera.position.x ) * 0.05;
+        //camera.position.y = (camera.position.y ) * 0.05;
+        //console.log('pos:' + scene.position);
+        //camera.lookAt( 0,0,0 );
+        
+       // camera.lookAt( scene.position );
+
+        renderer.render( scene, camera );
+
+        context.drawImage( renderer.domElement, 0, 0 );
+
+    };
+
+}
+
+//boids
 
 //load object functions
 /*
@@ -96,11 +149,12 @@ function loadModels(mixers, actions, scene)
         action.play();
         actions.push(action);
         
-        //
+        //adds the models to the array
         model = arr[(arr.length-1)].scene.children[ 0 ];
         model.position.copy( position );
         model.scale.set(scale, scale, scale);
 
+        //console.log(dumpObject(arr[(arr.length-1)].scene));
         //Aniimation and mixers
         scene.add(arr[(arr.length-1)].scene);
     };
@@ -116,6 +170,7 @@ function loadModels(mixers, actions, scene)
         loader.load('objects/bream/scene.gltf', gltf => onLoad( models.bream, gltf, breamLocations[i], 0.085), onProgress, onError);
         //console.log('bream locations: ' + breamLocations[i]);
     }
+    
     //whale
     var loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
     loader.load('objects/blue_whale/scene.gltf', gltf => onLoad(models.whale, gltf, loc, 30), onProgress, onError);
@@ -125,6 +180,7 @@ function loadModels(mixers, actions, scene)
         loc = new THREE.Vector3(getRandomArbitrary(-60,60), getRandomArbitrary(-100,-20), getRandomArbitrary(-60,60));
         loader.load('objects/discus/scene.gltf', gltf => onLoad(models.discus, gltf, loc, 0.50), onProgress, onError);
     }
+    
 }
 
 
@@ -138,15 +194,23 @@ let discusBoid;
 let discusMeshGroup;
 let discusRotate = new THREE.Vector3(80,0,80);
 
+let thirdBoid;
+let thirdMeshGroup;
+let thirdRoate = new THREE.Vector3(0,0,0);
+
+let flageBoid; 
+let flageMeshGroup;
+let flageRotate = new THREE.Vector3(0,0,0);
+
 let creatureNum = breamNum;
 //creatures
-const generateBoid = (boid, creatureMeshGroup) => {
+const generateBoid = (boid, boidSize, creatureMeshGroup, color, geo) => {
     const creatures = [];
     scene.remove(creatureMeshGroup);
     creatureMeshGroup = new THREE.Group();
-    for (let i = 0; i<creatureNum; i++)
+    for (let i = 0; i<boidSize; i++)
     {
-        const creature = new Creature();
+        const creature = new Creature(color, geo);
         creatureMeshGroup.add(creature.mesh);
         creatures.push(creature);
     }
@@ -154,7 +218,6 @@ const generateBoid = (boid, creatureMeshGroup) => {
     scene.add(creatureMeshGroup);
     return boid;
 };
-
 
 function getRandomArbitrary(min, max) {
 return Math.random() * (max - min) + min;
@@ -177,25 +240,47 @@ function onMouseMove( event ) {
 
 function init()
 {
+
+    var canvas1 = document.getElementById( 'canvas1' );
+    var canvas2 = document.getElementById( 'canvas2' );
+    var canvas3 = document.getElementById( 'canvas3' );
+
+    var w = 700, h = 700;
+
+    var fullWidth = w * 3; //w * x. Where x is no. of columns
+    var fullHeight = h * 1; ////h * x. Where x is no. of rows
+
+    views.push( new View( canvas1, fullWidth, fullHeight, w * 0, h * 0, w, h ) );
+    views.push( new View( canvas2, fullWidth, fullHeight, w * 1, h * 0, w, h ) );
+    views.push( new View( canvas3, fullWidth, fullHeight, w * 2, h * 0, w, h ) );
     //Scene
     scene = new THREE.Scene();
     
     //Camera
-    camera = new THREE.PerspectiveCamera(55,
+    /*
+    mainCamera = new THREE.PerspectiveCamera(55,
         window.innerWidth / window.innerHeight, 
         0.1, 
         2500);
-    camera.position.set(0,1500,0);
+    mainCamera.position.set(0,1500,0);
+    */
 
     //Renderer
     renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    document.body.appendChild(renderer.domElement);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(w, h);
     
-    document.body.addEventListener('click', printCoords, true);
+    var page = document.getElementById('mainDiv');
+    if (page !== null && page !== undefined)
+    {
+        page.appendChild(renderer.domElement);   
+    }
+    
+    
+   //document.body.addEventListener('click', printCoords, true);
     document.body.addEventListener('mousemove', onMouseMove, true);
     document.body.addEventListener('keydown', onKeyPress, true);
+
     
     //clock for animations
     clock = new THREE.Clock();
@@ -205,37 +290,74 @@ function init()
     var ambientLight = new THREE.AmbientLight( 0xcccccc, 0.4 );
 	scene.add( ambientLight );
 
-    var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
-    camera.add( pointLight );
-    scene.add( camera );
+    
+    scene.add( mainCamera );
    
     scene.background = new THREE.Color( 0xffffff );
 
     //Axis helper
     var axesHelper = new THREE.AxesHelper( 5000 );
-    scene.add( axesHelper );
+    //scene.add( axesHelper );
 
     //controls
-    var controls = new OrbitControls( camera, renderer.domElement);
+   // var controls = new OrbitControls( mainCamera, renderer.domElement);
     
     //setting the camera position
     
-
     //event listeniner for window resize
-    window.addEventListener('resize', onWindowResize, false);
+    //window.addEventListener('resize', onWindowResize, false);
  
     loader = new GLTFLoader(); //instantitate loader for gltf objects
-    loadModels(mixers, actions, scene); //Function call to load all objects
+    //loadModels(mixers, actions, scene); //Function call to load all objects
 
     //video
     backgroundTexture();
 
-    boxContainer.mesh.position.y = -1000;
+    boxContainer.mesh.position.y = -1500;
     scene.add(boxContainer);
     
-    breamBoid = generateBoid(breamBoid, breamMeshGroup);
-    discusBoid = generateBoid(discusBoid, discusMeshGroup);
-    //generateBoid();
+    //Boids...
+    //create geometry for the boids
+    //One boid per type of fish 
+    //Cylinder geometries
+    const cylGeo = new THREE.CylinderGeometry(1, 8, 25, 12);
+    cylGeo.rotateX(THREE.Math.degToRad(90));
+    breamBoid = generateBoid(breamBoid, 25, breamMeshGroup, 0xff522c, cylGeo);
+    discusBoid = generateBoid(discusBoid, 25, discusMeshGroup, 0x22bddd, cylGeo);
+    thirdBoid = generateBoid(thirdBoid, 25, thirdMeshGroup, 0xe71cad, cylGeo);
+    //Dinoflaggelites slow moing
+    const sphGeo = new THREE.SphereGeometry(7, 7, 7);
+    flageBoid = generateBoid(flageBoid, 50, flageMeshGroup, 0x82f63f, sphGeo);
+    //Change movement behaviour of flageBoid
+    flageBoid.params.maxSpeed = 0.5;
+    flageBoid.params.separate.maxForce = 0.5;
+    flageBoid.params.separate.effectiveRange = 75;
+
+    
+    //flageBoid.params.separate.effectiveRange = 20;
+    models.flage.length = 50;
+    
+    //flageBoid = generateBoid(flageBoid, flageMeshGroup, 0x82f63f, cylGeo);
+    
+    
+    var pointLight = new THREE.PointLight( 0xffffff, 0.8 );
+    scene.add( pointLight );
+    pointLight.position.set(0,1000,0);
+
+    //predator/seeker behaviour
+    for (let i =0; i<10; i++){
+       // seeker = new SeekingCreature(getRandomArbitrary(-100,100), getRandomArbitrary(-30,-10), getRandomArbitrary(-100,100), scene);
+    }
+
+    //seekers.push(seeker);
+    
+    //Create walkers
+    for (var i = 0; i<5; i++)
+    {
+        let w = new Walker(1920,1080, scene);
+        walkers.push(w);
+       // scene.add(w.plane);
+    }
     
 }
 
@@ -244,8 +366,8 @@ LOOPING - Animate() function
 */
 function animate()
 {   
-    window.requestAnimationFrame( animate );
-    renderer.render( scene, camera );
+ 
+   // renderer.render( scene, mainCamera );
     //moveModels(models.bream);
     
     //Animations
@@ -254,12 +376,31 @@ function animate()
     {
         if (mixers[i]) mixers[i].update( delta );
     }
+    
+    //Render video
     renderVideo();
+    
+    //Model Movement 
     moveModels(models.bream, breamBoid, breamRotate);
     moveModels(models.discus, discusBoid, discusRotate);
-    moveCrude(models.whale);
-    //models.bream[0].scene.children[ 0 ].rotation.x += 5;
+    moveModels(models.flage, flageBoid, flageRotate);
+    moveModels(models.flage, thirdBoid, thirdRoate);
+    
+    //moveCrude(models.whale);
 
+    //Update seeker 
+    coords = new THREE.Vector2(mouse.x, 0, mouse.y);
+   // updateSeekers(coords);
+
+   for (let i = 0; i<5 ; i++)
+   {
+       //walkers[i].move(10);
+       walkers[i].moveAlongCurve();
+   }
+
+   views.forEach(v => v.render()); //Update each of the camera views
+   
+   window.requestAnimationFrame( animate );
 }
 
 //Main
@@ -270,13 +411,14 @@ animate();
 Other functions for updating other elements
 */
 var currModel;
-function moveModels(arr, boid, rotate)
+function moveModels(arr, boid, rotation)
 {
     boid.update(boxContainer); 
 
    for (let i =0; i<arr.length; i++)
    {
 
+    if (arr[i] !== null && arr[i] !== undefined){
         //Move fish with creature
         currModel = arr[ i ].scene.children[ 0 ];
         currModel.position.x = boid.creatures[i].mesh.position.x;
@@ -287,9 +429,9 @@ function moveModels(arr, boid, rotate)
         currModel.rotation.y = boid.creatures[i].mesh.rotation.y;
         currModel.rotation.z = boid.creatures[i].mesh.rotation.z;
         
-        currModel.rotateX(rotate.x);
-        currModel.rotateY(rotate.y);
-        currModel.rotateZ(rotate.z);
+        currModel.rotateX(rotation.x);
+        currModel.rotateY(rotation.y);
+        currModel.rotateZ(rotation.z);
         
        
         //Rotation of model with movement
@@ -301,13 +443,24 @@ function moveModels(arr, boid, rotate)
         currModel.lookAt(head);
     
         */
-   }
+    }
+    }
 
+}
+
+function updateSeekers(target)
+{
+    
+    for (var i = 0; i< seekers.length; i++)
+    {
+       // console.log('updating...');
+        seekers[i].update(target);
+    }
 }
 
 function webcamUpdate()
 {
-    if ( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
+    if ( navi444gator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
 
         var constraints = { video: { width: 1280, height: 720, facingMode: 'user' } };
 
@@ -346,13 +499,14 @@ function renderVideo(){
         }
     }
 }
-
+/*
 function onWindowResize()
 {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
+*/
 
 
 function backgroundTexture()
@@ -377,12 +531,13 @@ function backgroundTexture()
     
     var movieMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, overdraw: true, side: THREE.DoubleSide});
 
-    var movieGeometry = new THREE.PlaneBufferGeometry( 960, 540, myH, 4, 4);
+    var movieGeometry = new THREE.PlaneBufferGeometry( 1980+1000, 1080, 100, 4, 4);
     movieScreen = new THREE.Mesh( movieGeometry, movieMaterial );
  
-    movieScreen.position.set(0, -300, 0);
+    movieScreen.position.set(0, -200, 0);
     movieScreen.rotation.x = Math.PI * - 0.5;
     scene.add(movieScreen);
+    //console.log('ms pos' + movieScreen.position.x + movieScreen.position.y + movieScreen.position.z);
     video.play();
 }
 
@@ -418,6 +573,7 @@ function addGUI(){
     gui.add(breamBoids, "separationForce", 0, 0.25);
 }
 
+/*
 function printCoords()
 {
     var temp_arr = [];
@@ -426,7 +582,10 @@ function printCoords()
         temp_arr.push(breamBoids.boids[i].position);
        // console.log(temp_arr);
     }
+    console.log('clicked');
+    coneole.log(dumpObject(models.bream[0].scene));
 }
+*/
 var breamX = 10.5;
 function moveCrude(models){
     
@@ -467,8 +626,7 @@ function changeRotation(models, type)
 
 
 
-/*
-CURRENTLY UNUSED/PREVIOUSLY USED FUNCTIONS
+
 
 
 //dump gltf object tree
@@ -484,7 +642,8 @@ function dumpObject(obj, lines = [], isLast = true, prefix = '') {
     return lines;
 }
 
-
+/*
+CURRENTLY UNUSED/PREVIOUSLY USED FUNCTIONS
 //Function to visualise curve for which a given object will follow repeatedly
     
        function makeCurve(){

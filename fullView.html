@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="">
+        <style>
+            h2 {text-align:center;}
+            p {text-align:center;}
+
+            #info {
+                position: absolute;
+                top: 10px;
+                width: 100%;
+                text-align: center;
+                z-index: 100;
+                display:block;
+            }
+        </style>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">
+                You are using an <strong>outdated</strong> browser. 
+            Please<a href="#">upgrade your browser</a> to improve your experience.
+            </p>
+        <![endif]-->        
+        <!-- 
+           ---out of date because i use ESM-------
+        <script src="./three/build/three.module.js"></script>
+        <script src="./three/examples/js/loaders/OBJLoader.js"></script>
+        <script src="./three/examples/js/loaders/GLTFLoader.js"></script>
+        <script src="./three/examples/js/controls/OrbitControls.js"></script>
+        <script src= "./three/examples/js/utils/RoughnessMipmapper.js"></script>
+        --in date--
+        <script type="module" src="./boids.js"></script>
+        <script src="./libs/happyfuntimes/dist/hft.js"></script>
+        <script type="module" src="./syncThree.js"></script>
+        <script data-main="./scripts/index.js" src="/node_modules/requirejs/require.js"></script>
+        -->
+        <div>
+        <video id="webcam-video" autoplay='true' style="display:none"></video>
+        <script type="module" src="./scripts/index.js"></script>
+    </div>
+       
+    <div id="info">
+    <h2>Press 'w' to play video. <br>
+        Mouse controls can be used to move around.</h2>
+    </div>
+
+    <div id = "mainDiv">
+        
+    </div>
+    </body>
+</html>

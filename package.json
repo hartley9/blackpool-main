@@ -1,23 +1,34 @@
 {
-  "name": "blackpool",
+  "name": "blackpool-main",
   "version": "1.0.0",
-  "description": "blackpool impl",
+  "description": "To launch this cd into the directory where index.html is located. Launch a server and visit that port on a web browser (preferably chrome, as this is what was used in dev).",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hartley9/blackpool.git"
+    "url": "git+https://github.com/hartley9/blackpool-main.git"
   },
-  "author": "kobi hartley",
+  "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/hartley9/blackpool/issues"
+    "url": "https://github.com/hartley9/blackpool-main/issues"
   },
-  "homepage": "https://github.com/hartley9/blackpool#readme",
+  "homepage": "https://github.com/hartley9/blackpool-main#readme",
+  "devDependencies": {
+    "@peermetrics/webrtc-stats": "^2.2.3",
+    "chart.js": "^2.9.3",
+    "eslint": "^6.8.0",
+    "getstats": "^1.2.0",
+    "maptastic": "^3.0.0",
+    "socket.io-client": "^2.3.0",
+    "webrtc": "^1.14.1"
+  },
   "dependencies": {
-    "happyfuntimes": "^0.2.5",
+    "express": "^4.17.1",
     "requirejs": "^2.3.6",
-    "three": "file:three"
+    "socket.io": "^2.3.0"
   }
 }

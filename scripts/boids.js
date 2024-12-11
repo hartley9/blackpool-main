@@ -1,14 +1,14 @@
 import * as THREE from '../build/three.module.js';
 
 let mainParams = {
-    maxSpeed: 35, 
+    maxSpeed: 5, 
     seek:{
-        maxForce: 0.15
+        maxForce: 0.05
     },
 
     align: {
         effectiveRange: 85, 
-        maxForce: 0.16
+        maxForce: 0.06
     },
 
     separate: {
@@ -68,8 +68,8 @@ export class Boid {
             }
         };
     }
-
-    update(boxContainer){
+    //
+    update(boxContainer, walkers){
         this.creatures.forEach(creature => {
             //boid
             creature.applyForce(this.align(creature));
@@ -83,10 +83,12 @@ export class Boid {
                 boxContainer.mesh.geometry.parameters.height / 2,
                 boxContainer.mesh.geometry.parameters.depth / 2));
 
+
+           // creature.applyForce(this.avoidWalkers(currentCreature, walkers))
             creature.update();
         });
     }
-
+    //
     setBoost(){
         this.creatures.forEach(creature => {
             if (creature.boost.length() === 0){
@@ -98,7 +100,7 @@ export class Boid {
             }
         });
     }
-    
+    //
     seek(currentCreature, target = new THREE.Vector3()){
         const maxSpeed = this.params.maxSpeed;
         const maxForce = this.params.seek.maxForce; 
@@ -115,6 +117,7 @@ export class Boid {
         return steerVector;
     }
 
+    //
     align(currentCreature){
         const sumVector = new THREE.Vector3();
         let cnt = 0;
@@ -230,28 +233,57 @@ export class Boid {
         sumVector.multiplyScalar(Math.pow(currentCreature.velocity.length(), 3));
         return sumVector;
       }
+
+    avoidWalkers(currentCreature, walkers){
+        walkers.forEach();
+    }
+
+    avoidWalker(currentCreature, walker)
+    {
+        currentCreature.mesh.geometry.computeBoundingSphere();
+        const boundingSphere = currentCreature.mesh.geometry.boundingSphere;
+        const toMeVector = new THREE.Vector3();
+        toMeVector.subVectors(currentCreature.mesh.position, walker.position);
+        const distance = toMeVector.length() - ball.geometry.parameters.radius - boundingSphere.radius;
+
+        const steerVector = currentCreature.mesh.position.clone();
+
+        if (distance < 75)
+        {
+            const axis = new THREE.Vector3();
+            axis.crossVectors(toMeVector, currentCreature.velocity);
+            axis.normalize();
+
+            const quaternion = new THREE.Quaternion();
+            quaternion.setFromAxisAngle(axis, THREE.Math.degToRad(90));
+
+            steerVector.applyQuaternion(quaternion);
+            steerVector.normalize();
+
+            steerVector.multiplyScalar(1 / distance);
+            steerVector.multiplyScalar(currentCreature.velocity.length() * 10);
+
+        } else {
+            steerVector.multiplyScalar(0);
+        }
+
+        return steerVector;
+    }
 }
 
 export class Creature {
-    constructor(){
+    constructor(color, geometry){
         this.headOut;
-        const geometry = new THREE.CylinderGeometry(0.1,0.2,0.2,0.1);
+       // const geometry = new THREE.CylinderGeometry(1, 8, 25, 12);
         //no need to rotate
-        geometry.rotateX(THREE.Math.degToRad(90));
-        var color = new THREE.Color(`hsl(${getRandomNum(360)}, 100%, 50%)`);
+       // geometry.rotateX(THREE.Math.degToRad(120));
+        var color = new THREE.Color(color);
         const material = new THREE.MeshLambertMaterial({
             wireframe: false, 
             color: color
         });
 
         this.mesh = new THREE.Mesh(geometry, material);
-        //const radius = getRandomNum(100, 3000);
-        //const theta = THREE.Math.degToRad(getRandomNum(180));
-        //const phi = THREE.Math.degToRad(getRandomNum(360));
-
-        //this.mesh.position.x = Math.sin(theta) * Math.cos(phi) * radius;
-        //this.mesh.position.y = Math.sin(theta) * Math.sin(phi) * radius;
-        //this.mesh.position.z = Math.cos(theta) * radius;
 
         this.velocity = new THREE.Vector3(getRandomNum(100, -100) * 0.1, getRandomNum(100, -100) * 0.1, getRandomNum(100, -100) * 0.1);
         this.acceleration = new THREE.Vector3();
